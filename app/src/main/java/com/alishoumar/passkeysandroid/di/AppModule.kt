@@ -19,4 +19,9 @@ object AppModule {
         return CredentialManager.create(context)
     }
 
+    @Provides
+    @Singleton
+    fun provideApplicationContext(@ApplicationContext context: Context): Context {
+        return context
+    }
 }

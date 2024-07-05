@@ -24,7 +24,8 @@ import kotlin.random.Random
 
 @HiltViewModel
 class SignUpViewModel @Inject constructor(
-    private val credentialManager: CredentialManager
+    private val credentialManager: CredentialManager,
+    private val context: Context,
 ):ViewModel() {
 
      var signUpState by mutableStateOf(SignUpState())
@@ -44,46 +45,41 @@ class SignUpViewModel @Inject constructor(
     }
 
   @SuppressLint("PublicKeyCredential")
-  fun createPassKey(requestJson:String= createRegistrationRequest(),
-                    context: Context,
-                    preferImmediatelyAvailableCredentials: Boolean){
-
-
-
+  fun createPassKey(requestJson:String= createRegistrationRequest()){
 
       val createPublicKeyCredentialRequest = CreatePublicKeyCredentialRequest(
           requestJson = requestJson,
-          preferImmediatelyAvailableCredentials = preferImmediatelyAvailableCredentials
       )
 
       viewModelScope.launch (Dispatchers.Main){
           try {
               Log.d("tag", "createPassKey: $context")
+              Log.d("tag", "createPassKey: $requestJson")
+
               val result= credentialManager.createCredential(
                   request = createPublicKeyCredentialRequest,
                   context = context
               )
               Log.d("tag", "createPassKey: $result")
           }catch (e: CreateCredentialException){
-              Log.d("tag", "createPassKey: $e")
+              Log.d("tag", "createPassKey: ${e.message}")
           }
       }
   }
 
     private fun createRegistrationRequest(): String {
-        // Generate random challenge bytes
+
         val challenge = ByteArray(32)
         SecureRandom().nextBytes(challenge)
 
-        // Create the JSON structure
         val json = JSONObject().apply {
-            put("challenge", Base64.encodeToString(challenge, Base64.NO_WRAP))
+            put("challenge", getEncodedChallenge())
             put("rp", JSONObject().apply {
+                put("id", "passkeys-codelab.glitch.me")
                 put("name", "PassKeysAndroid")
-                put("id", "alishoumar.passkeysandroid.com")
             })
             put("user", JSONObject().apply {
-                put("id", ByteArray(16)) // Empty 16-byte array
+                put("id", getEncodedUserId())
                 put("name", signUpState.emailL)
                 put("displayName", signUpState.fullName)
             })
@@ -93,8 +89,32 @@ class SignUpViewModel @Inject constructor(
                     put("alg", -7)
                 })
             })
+            put("authenticatorSelection", JSONObject().apply {
+                put("authenticatorAttachment", "platform")
+                put("residentKey", "required")
+            })
         }
 
+
         return json.toString()
+    }
+
+    private fun getEncodedUserId(): String {
+        val random = SecureRandom()
+        val bytes = ByteArray(64)
+        random.nextBytes(bytes)
+        return Base64.encodeToString(
+            bytes,
+            Base64.NO_WRAP or Base64.URL_SAFE or Base64.NO_PADDING
+        )
+    }
+    private fun getEncodedChallenge(): String {
+        val random = SecureRandom()
+        val bytes = ByteArray(32)
+        random.nextBytes(bytes)
+        return Base64.encodeToString(
+            bytes,
+            Base64.NO_WRAP or Base64.URL_SAFE or Base64.NO_PADDING
+        )
     }
 }

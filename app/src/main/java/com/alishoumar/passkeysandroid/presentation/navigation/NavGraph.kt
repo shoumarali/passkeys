@@ -113,8 +113,6 @@ fun NavGraphBuilder.signUpRoute(
             },
             passKeysSignUp = {
                 viewModel.createPassKey(
-                    context= context
-                    , preferImmediatelyAvailableCredentials = true
                 )
             },
             otherOptionsClick = otherOptionClick,
